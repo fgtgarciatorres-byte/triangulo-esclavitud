@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>La ruta del triángulo</title>
+<style>
+:root{--sea:#0f3a52;--sea2:#1a5b7c;--land:#d9c28f;--land2:#b99a5b;--ink:#2a1d0e;--paper:#f6ecd2;--acc:#c4552b;--gold:#e8b64a;--ok:#2e8b57;--bad:#b83a3a;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#0a2433;color:var(--paper);font-family:"Trebuchet MS",Verdana,sans-serif}
+body{display:flex;justify-content:center}
+#app{width:100%;max-width:900px;padding:10px;position:relative}
+h1,h2{font-family:Georgia,"Times New Roman",serif;margin:0}
+.screen{display:none}.screen.on{display:block;animation:fade .5s}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.btn{background:var(--gold);color:var(--ink);border:0;border-radius:12px;padding:16px 34px;font-size:1.2rem;font-weight:bold;cursor:pointer;box-shadow:0 5px 0 #a8791f;transition:transform .1s}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #a8791f}
+#start,#end{text-align:center;padding:40px 14px;background:radial-gradient(circle at 50% 30%,var(--sea2),var(--sea));border-radius:18px;border:3px solid var(--gold);margin-top:10px}
+#start h1{font-size:clamp(2rem,8vw,3.6rem);letter-spacing:2px;color:var(--gold);text-shadow:0 3px 0 #000a}
+#start p{font-size:1.3rem;margin:14px 0 30px}
+.boat-anim{font-size:0}.boat-anim svg{width:110px;animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-8px) rotate(3deg)}}
+.hud{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}
+.hud div{background:#0008;border:2px solid var(--land2);border-radius:10px;padding:6px 10px;font-size:.9rem}
+.hud b{display:block;font-size:1.05rem;color:var(--gold)}
+.hud .wide{grid-column:1/-1}
+.bar{height:10px;background:#0006;border-radius:6px;margin-top:4px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--acc));transition:width .6s}
+#mapwrap{position:relative;border:4px solid var(--land2);border-radius:14px;overflow:hidden;background:var(--sea);touch-action:none}
+svg#map{display:block;width:100%;height:auto}
+.land{fill:var(--land);stroke:var(--land2);stroke-width:.4}
+.lbl{font-size:2.3px;fill:var(--ink);font-weight:bold;text-anchor:middle;font-family:Georgia,serif}
+.sealbl{font-size:2.6px;fill:#ffffff55;letter-spacing:.6px;text-anchor:middle;font-family:Georgia,serif}
+.route{fill:none;stroke:#ffffff88;stroke-width:.7;stroke-dasharray:1.6 1.2}
+.route.done{stroke:var(--gold);stroke-dasharray:none}
+.route.cur{stroke:#fff;stroke-width:.9}
+.ring{fill:none;stroke:var(--gold);stroke-width:.6;transform-box:fill-box;transform-origin:center;animation:pulse 1.2s infinite}
+@keyframes pulse{from{transform:scale(.6);opacity:1}to{transform:scale(1.8);opacity:0}}
+.cloud{position:absolute;pointer-events:none;width:14%;opacity:.35;animation:drift 28s linear infinite}
+@keyframes drift{from{transform:translateX(-30%)}to{transform:translateX(700%)}}
+#pad{display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,64px);gap:6px;justify-content:center;margin:12px 0;user-select:none;-webkit-user-select:none;touch-action:none}
+#pad button{background:var(--land);border:3px solid var(--land2);border-radius:14px;font-size:1.6rem;color:var(--ink);cursor:pointer;touch-action:none}
+#pad button:active{background:var(--gold)}
+#pad .u{grid-column:2;grid-row:1}#pad .l{grid-column:1;grid-row:2}#pad .d{grid-column:2;grid-row:2}#pad .r{grid-column:3;grid-row:2}
+.hint{text-align:center;font-size:.85rem;opacity:.8}
+#toast{position:absolute;left:50%;top:12%;transform:translateX(-50%);background:var(--gold);color:var(--ink);padding:8px 18px;border-radius:20px;font-weight:bold;opacity:0;transition:opacity .5s;pointer-events:none;white-space:nowrap;font-size:.95rem}
+#modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;padding:14px;z-index:9;overflow:auto}
+#modal.on{display:flex}
+.card{background:var(--paper);color:var(--ink);border-radius:16px;border:4px solid var(--land2);padding:20px;max-width:560px;width:100%;animation:fade .3s}
+.card small{color:var(--acc);font-weight:bold;letter-spacing:1px}
+.card h2{font-size:1.35rem;margin:6px 0 14px}
+.opt{display:block;width:100%;text-align:left;margin:8px 0;padding:14px;font-size:1.05rem;background:#fff;border:3px solid var(--land2);border-radius:12px;cursor:pointer;color:var(--ink);font-family:inherit}
+.opt:hover{background:#fff6dc}
+.opt.ok{background:#cdeedb;border-color:var(--ok)}.opt.bad{background:#f5cccc;border-color:var(--bad)}
+.opt[disabled]{cursor:default}
+#fb{display:none;margin-top:10px}
+#fb h3{margin:0 0 4px;font-size:1.3rem}
+#fb p{margin:4px 0 12px}
+.sum{display:grid;gap:10px;margin:22px 0;text-align:left}
+.sum div{background:#0007;border-left:6px solid var(--gold);padding:10px 14px;border-radius:8px}
+.sum b{color:var(--gold)}
+#end h1{color:var(--gold);font-size:clamp(1.8rem,7vw,3rem)}
+.big{font-size:1.5rem;margin:10px 0}
+</style></head>
+<body><div id="app">
+
+<section id="start" class="screen on">
+  <div class="boat-anim"><svg viewBox="-8 -12 16 18"><path d="M-6 1H6L4 4H-4Z" fill="#8b4f24"/><path d="M0-10V1" stroke="#5b3416" stroke-width=".6"/><path d="M.6-9Q5-4 .6-1Z" fill="#f6ecd2"/><path d="M-.6-8Q-4-4-.6-1Z" fill="#e6d6ae"/></svg></div>
+  <h1>LA RUTA DEL TRIÁNGULO</h1>
+  <p>Un viaje por el comercio triangular</p>
+  <button class="btn" id="go">COMENZAR</button>
+</section>
+
+<section id="game" class="screen">
+  <div class="hud">
+    <div class="wide">Ruta actual<b id="rname"></b><span id="rcargo" style="font-size:.85rem"></span><div class="bar" style="padding:0"><i id="prog"></i></div></div>
+    <div>Puntuación<b id="score">0</b></div>
+    <div>Respondidas<b id="ans">0 / 10</b></div>
+    <div>Ruta<b id="rn">1 / 3</b></div>
+  </div>
+  <div id="mapwrap">
+    <svg id="map" viewBox="0 0 100 62">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a5b7c"/><stop offset="1" stop-color="#0f3a52"/></linearGradient>
+        <marker id="ar" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0L6 3L0 6Z" fill="#fff"/></marker>
+      </defs>
+      <rect width="100" height="62" fill="url(#g)"/>
+      <polygon class="land" points="0,0 42,0 38,12 32,22 27,30 25,38 21,36 17,28 8,24 0,20"/>
+      <polygon class="land" points="24,41 38,40 48,46 44,56 36,62 30,62 26,52"/>
+      <polygon class="land" points="62,0 100,0 100,12 90,17 82,19 74,13 66,8"/>
+      <polygon class="land" points="84,26 100,24 100,62 88,62 82,52 80,40"/>
+      <ellipse class="land" cx="31" cy="35" rx="2.6" ry="1"/><ellipse class="land" cx="36" cy="33.5" rx="2.2" ry=".9"/><ellipse class="land" cx="41" cy="34.5" rx="2.4" ry="1"/>
+      <text class="lbl" x="14" y="11">América del Norte</text>
+      <text class="lbl" x="35" y="52">América del Sur</text>
+      <text class="lbl" x="88" y="7">Europa</text>
+      <text class="lbl" x="92" y="48">África occidental</text>
+      <text class="lbl" x="35" y="30.5">Antillas</text>
+      <text class="sealbl" x="62" y="56">OCÉANO ATLÁNTICO</text>
+      <path id="r0" class="route" d="M77 21L77 41" marker-end="url(#ar)"/>
+      <path id="r1" class="route" d="M77 41L40 33" marker-end="url(#ar)"/>
+      <path id="r2" class="route" d="M40 33L77 21" marker-end="url(#ar)"/>
+      <g id="dots"></g>
+      <circle id="ring" class="ring" r="2.6"/>
+      <g id="ship"><g id="shipin"><path d="M-3.2 .3H3.2L2.2 2.2H-2.2Z" fill="#8b4f24"/><path d="M0-5V.3" stroke="#5b3416" stroke-width=".35"/><path d="M.3-4.8Q2.8-2.2 .3-.4Z" fill="#f6ecd2"/><path d="M-.3-4.2Q-2.2-2.2-.3-.4Z" fill="#e6d6ae"/></g></g>
+    </svg>
+    <svg class="cloud" style="top:14%;animation-delay:-5s" viewBox="0 0 40 16"><path d="M6 14a5 5 0 010-10 8 8 0 0115-2 7 7 0 0114 4 4 4 0 010 8z" fill="#fff"/></svg>
+    <svg class="cloud" style="top:58%;animation-delay:-18s;width:11%" viewBox="0 0 40 16"><path d="M6 14a5 5 0 010-10 8 8 0 0115-2 7 7 0 0114 4 4 4 0 010 8z" fill="#cfd8e0"/></svg>
+    <div id="toast"></div>
+  </div>
+  <div id="pad">
+    <button class="u" data-k="up" aria-label="Arriba">▲</button>
+    <button class="l" data-k="left" aria-label="Izquierda">◀</button>
+    <button class="d" data-k="down" aria-label="Abajo">▼</button>
+    <button class="r" data-k="right" aria-label="Derecha">▶</button>
+  </div>
+  <p class="hint">Mueve el barco con las flechas del teclado hasta el círculo brillante.</p>
+</section>
+
+<section id="end" class="screen">
+  <h1>¡RUTA COMPLETADA!</h1>
+  <p style="font-size:1.2rem">Has completado la ruta del comercio triangular.</p>
+  <div class="big">Puntuación final: <b style="color:var(--gold)" id="fscore"></b></div>
+  <div class="big">Preguntas acertadas: <b style="color:var(--gold)" id="fok"></b> de 10</div>
+  <div class="sum">
+    <div><b>EUROPA → ÁFRICA</b><br>Tejidos, armas, alcohol y quincalla.</div>
+    <div><b>ÁFRICA → AMÉRICA</b><br>Transporte de personas esclavizadas hacia las Antillas.</div>
+    <div><b>AMÉRICA → EUROPA</b><br>Metales y productos tropicales.</div>
+  </div>
+  <button class="btn" id="again">JUGAR DE NUEVO</button>
+</section>
+
+<div id="modal"><div class="card">
+  <small id="qn"></small>
+  <h2 id="qt"></h2>
+  <div id="opts"></div>
+  <div id="fb"><h3 id="fbt"></h3><p id="fbc"></p><p id="fbe"></p><button class="btn" id="next" style="padding:12px 26px;font-size:1.05rem">CONTINUAR</button></div>
+</div></div>
+</div>
+
+<script>
+// Contenido basado únicamente en la página 40 del libro ("La ruta de la esclavitud")
+var Q=[
+{q:"¿Entre qué tres zonas se organizaba el comercio triangular?",o:["Europa, África y América","Europa, Asia y América","África, Asia y Europa"],c:0,e:"El mapa de la página muestra un triángulo en el océano Atlántico entre Europa, África occidental y América (las Antillas)."},
+{q:"¿Qué necesitaban las minas y las grandes plantaciones para trabajar?",o:["Poca mano de obra","Una gran cantidad de mano de obra","Solo trabajadores europeos"],c:1,e:"El trabajo en las minas y en las grandes plantaciones requería abundante mano de obra."},
+{q:"¿Qué se organizó para conseguir esa mano de obra?",o:["Un sistema de tráfico de esclavos negros africanos","Un sistema de comercio de animales","Una red de agricultores"],c:0,e:"Para suministrar esa mano de obra se organizó pronto un sistema de tráfico de esclavos negros africanos."},
+{q:"¿Durante qué siglo este tráfico afectó a unas 900 000 personas?",o:["Siglo XV","Siglo XVI","Siglo XVII"],c:1,e:"Durante el siglo XVI, este tráfico afectó a unas 900 000 personas."},
+{q:"¿Hasta cuántas personas llegó a afectar este tráfico en el siglo XVII?",o:["900 000","3 o 4 millones","7 o 9 millones"],c:1,e:"La cifra se amplió hasta los 3 o 4 millones en el siglo XVII."},
+{q:"¿Qué países llevaron a cabo principalmente el negocio de los esclavos?",o:["Holanda, Inglaterra, Dinamarca y Francia","España, Portugal, Italia y Alemania","Francia, Portugal, Rusia y Holanda"],c:0,e:"El negocio lo llevaron a cabo, sobre todo, los holandeses, los ingleses, los daneses y los franceses."},
+{q:"¿Qué llevaban los comerciantes europeos a la costa occidental de África?",o:["Tejidos, armas, alcohol y quincalla","Azúcar, café y tabaco","Metales preciosos y cacao"],c:0,e:"Los comerciantes europeos vendían en la costa occidental de África tejidos, armas, alcohol y quincalla (mercancías de escaso valor) a cambio de esclavos."},
+{q:"¿Hacia dónde transportaban después a las personas esclavizadas?",o:["Europa","Las Antillas","Asia"],c:1,e:"Los comerciantes transportaban a los esclavos hasta las Antillas, donde los vendían."},
+{q:"¿Con qué regresaban los barcos a Europa?",o:["Con esclavos","Con metales o productos tropicales","Con armas y tejidos"],c:1,e:"Los barcos regresaban a Europa con metales o productos tropicales."},
+{q:"¿Cuánto duraba aproximadamente cada viaje?",o:["Unas dos semanas","Unos dos meses","Unos seis meses"],c:1,e:"En cada viaje, que duraba unos dos meses, los barcos transportaban personas en condiciones pésimas."}
+];
+var A=[77,21],B=[77,41],C=[40,33];
+var R=[
+{n:"EUROPA → ÁFRICA",cargo:"Tejidos, armas, alcohol y quincalla",a:A,b:B,qs:[0,6,1,2]},
+{n:"ÁFRICA → AMÉRICA",cargo:"Esclavos hacia las Antillas",a:B,b:C,qs:[7,3,4]},
+{n:"AMÉRICA → EUROPA",cargo:"Metales y productos tropicales",a:C,b:A,qs:[5,8,9]}
+];
+var $=function(i){return document.getElementById(i)};
+var ri,wi,pos,score,okc,answered,keys={},paused=true,last=0,cur,faceL=false,NS="http://www.w3.org/2000/svg";
+
+function show(id){["start","game","end"].forEach(function(s){$(s).classList.toggle("on",s===id)})}
+function target(){var r=R[ri],k=r.qs.length,t=(wi+1)/k;return [r.a[0]+(r.b[0]-r.a[0])*t,r.a[1]+(r.b[1]-r.a[1])*t]}
+function toast(t){var e=$("toast");e.textContent=t;e.style.opacity=1;setTimeout(function(){e.style.opacity=0},2200)}
+function hud(){
+  $("rname").textContent=R[ri].n;$("rcargo").textContent=R[ri].cargo;
+  $("score").textContent=score;$("ans").textContent=answered+" / 10";$("rn").textContent=(ri+1)+" / 3";
+  $("prog").style.width=(answered*10)+"%";
+  for(var i=0;i<3;i++){var p=$("r"+i);p.setAttribute("class","route"+(i<ri?" done":i===ri?" cur":""))}
+  var d=$("dots");d.innerHTML="";
+  var r=R[ri],k=r.qs.length;
+  for(var j=0;j<k;j++){var t=(j+1)/k,c=document.createElementNS(NS,"circle");
+    c.setAttribute("cx",r.a[0]+(r.b[0]-r.a[0])*t);c.setAttribute("cy",r.a[1]+(r.b[1]-r.a[1])*t);c.setAttribute("r",j===k-1?1.3:.9);
+    c.setAttribute("fill",j<wi?"#e8b64a":"#fff");d.appendChild(c)}
+  var tg=target();$("ring").setAttribute("cx",tg[0]);$("ring").setAttribute("cy",tg[1]);
+}
+function place(){$("ship").setAttribute("transform","translate("+pos[0]+" "+pos[1]+")");$("shipin").setAttribute("transform",faceL?"scale(-1 1)":"")}
+function start(){
+  ri=0;wi=0;score=0;okc=0;answered=0;pos=R[0].a.slice();keys={};
+  $("modal").classList.remove("on");show("game");hud();place();
+  toast("Ruta 1: "+R[0].n);paused=false;last=performance.now();
+}
+function loop(t){
+  var dt=Math.min(40,t-last)/16.7;last=t;
+  if(!paused){
+    var dx=(keys.right?1:0)-(keys.left?1:0),dy=(keys.down?1:0)-(keys.up?1:0);
+    if(dx||dy){var l=Math.hypot(dx,dy),s=.5*dt;
+      pos[0]=Math.max(2,Math.min(98,pos[0]+dx/l*s));pos[1]=Math.max(2,Math.min(60,pos[1]+dy/l*s));
+      if(dx)faceL=dx<0;place()}
+    var tg=target();
+    if(Math.hypot(pos[0]-tg[0],pos[1]-tg[1])<2.6){paused=true;keys={};ask()}
+  }
+  requestAnimationFrame(loop);
+}
+function ask(){
+  var qi=R[ri].qs[wi],q=Q[qi];cur=q;
+  $("qn").textContent="PREGUNTA "+(answered+1)+" DE 10 · "+R[ri].n;
+  $("qt").textContent=q.q;$("fb").style.display="none";
+  var o=$("opts");o.innerHTML="";
+  q.o.forEach(function(txt,i){var b=document.createElement("button");b.className="opt";b.textContent="ABC"[i]+") "+txt;
+    b.onclick=function(){pick(i)};o.appendChild(b)});
+  $("modal").classList.add("on");
+}
+function pick(i){
+  var q=cur,bs=document.querySelectorAll(".opt"),good=i===q.c;
+  bs.forEach(function(b,j){b.disabled=true;if(j===q.c)b.classList.add("ok")});
+  if(!good)bs[i].classList.add("bad");
+  if(good){score+=10;okc++}
+  $("fbt").textContent=good?"¡Correcto!":"Respuesta incorrecta";
+  $("fbt").style.color=good?"#2e8b57":"#b83a3a";
+  $("fbc").textContent=good?"":"La respuesta correcta era: "+"ABC"[q.c]+") "+q.o[q.c];
+  $("fbc").style.display=good?"none":"block";
+  $("fbe").textContent=q.e;$("fb").style.display="block";
+  $("score").textContent=score;
+}
+$("next").onclick=function(){
+  answered++;wi++;$("modal").classList.remove("on");
+  if(wi>=R[ri].qs.length){
+    ri++;wi=0;
+    if(ri>=3){$("fscore").textContent=score+" puntos";$("fok").textContent=okc;show("end");return}
+    hud();toast("Ruta "+(ri+1)+": "+R[ri].n);
+  }else hud();
+  paused=false;last=performance.now();
+};
+var km={ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right",w:"up",s:"down",a:"left",d:"right"};
+addEventListener("keydown",function(e){if(km[e.key]){keys[km[e.key]]=true;if(e.key.indexOf("Arrow")===0)e.preventDefault()}});
+addEventListener("keyup",function(e){if(km[e.key])keys[km[e.key]]=false});
+document.querySelectorAll("#pad button").forEach(function(b){
+  var k=b.dataset.k;
+  b.addEventListener("pointerdown",function(e){e.preventDefault();keys[k]=true});
+  ["pointerup","pointerleave","pointercancel"].forEach(function(ev){b.addEventListener(ev,function(){keys[k]=false})});
+});
+$("go").onclick=start;$("again").onclick=start;
+requestAnimationFrame(loop);
+</script></body></html>
